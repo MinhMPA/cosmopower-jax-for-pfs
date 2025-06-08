@@ -24,12 +24,12 @@ class CosmoPowerJAX:
     probe : string
         The probe being considered to make predictions. 
         Must be one of (the names are hopefully self-explanatory):
-        'cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', custom_log', 'custom_pca', 'custom'.
+        'cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', custom_log', 'custom_pca', 'custom'
     filename : string, default=None
         In case you want to restore from a custom file with the same pickle format
         as the provided ones, indicate the name to the .pkl file here.
         The .pkl file should be placed in the `cosmopower_jax/trained_models/` folder.
-        You can specify either a .pkl file for a model trained on log-spectra ('custom_log'),
+        You can specify either a .pkl file for a model trained on log-spectra ('custom_log','custom'),
         or for a model trained with PCAplusNN ('custom_pca').
         This is generally to upload models trained with the original CP, 
         so you will also probably need to pip install tensorflow.
@@ -439,7 +439,7 @@ class CosmoPowerJAX:
 
         # Final layer prediction (no activations)
         w, b = weights[-1]
-        if self.probe == 'custom_log' or self.probe == 'custom_pca':
+        if self.probe in ['custom_log','custom_pca','custom']:
             # in original CP models, we assumed a full final bias vector...
             preds = jnp.dot(layer_out[-1], w.T) + b
         else:   
