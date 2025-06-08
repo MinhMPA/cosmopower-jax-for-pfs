@@ -24,12 +24,14 @@ class CosmoPowerJAX:
     probe : string
         The probe being considered to make predictions. 
         Must be one of (the names are hopefully self-explanatory):
-        'cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', custom_log', 'custom_pca', 'custom'
+        'cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', custom_log', 'custom_pca'.
+    raw_output : bool, default=False
+        Whether you just want the raw output, applicable for background quantities like distances.
     filename : string, default=None
         In case you want to restore from a custom file with the same pickle format
         as the provided ones, indicate the name to the .pkl file here.
         The .pkl file should be placed in the `cosmopower_jax/trained_models/` folder.
-        You can specify either a .pkl file for a model trained on log-spectra ('custom_log','custom'),
+        You can specify either a .pkl file for a model trained on log-spectra ('custom_log'),
         or for a model trained with PCAplusNN ('custom_pca').
         This is generally to upload models trained with the original CP, 
         so you will also probably need to pip install tensorflow.
@@ -43,11 +45,12 @@ class CosmoPowerJAX:
     verbose: bool, default=True
         Whether you want important warning or information to be displayed, or not.
     """
-    def __init__(self, probe, filename=None, filepath=None, verbose=True): 
-        if probe not in ['cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', 'custom_log', 'custom_pca', 'custom']:
+    def __init__(self, probe, raw_output=False, filename=None, filepath=None, verbose=True): 
+        if probe not in ['cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', 'custom_log', 'custom_pca']:
             raise ValueError(f"Probe not known. It should be one of "
-                         f"'cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', custom_log', 'custom_pca', 'custom'; found '{probe}'") 
+                         f"'cmb_tt', 'cmb_ee', 'cmb_te', 'cmb_pp', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', custom_log', 'custom_pca'; found '{probe}'") 
         
+        self.raw_output = raw_output
         if probe in ['cmb_tt', 'cmb_ee', 'mpk_lin', 'mpk_boost', 'mpk_nonlin', 'custom_log']:
             self.log = True
         else:
@@ -202,7 +205,7 @@ class CosmoPowerJAX:
             
         else:
             # Load pre-trained model
-            if probe in ['custom_log','custom']:
+            if probe == 'custom_log':
                 # first we try the standard approach, which will fail if TF>=2.14
                 # since TF removed support for pickle
                 try:
@@ -439,7 +442,7 @@ class CosmoPowerJAX:
 
         # Final layer prediction (no activations)
         w, b = weights[-1]
-        if self.probe in ['custom_log','custom_pca','custom']:
+        if self.probe == 'custom_log' or self.probe == 'custom_pca':
             # in original CP models, we assumed a full final bias vector...
             preds = jnp.dot(layer_out[-1], w.T) + b
         else:   
@@ -448,7 +451,12 @@ class CosmoPowerJAX:
 
         # Undo the standardisation
         preds = preds * feature_train_std + feature_train_mean
-        if self.log == True:
+
+        # For some background quantities like distances, output and return early the raw prediction, since no further transformation needed
+        if self.raw_output:
+            return preds.squeeze()
+        # For the other probes, proceed with either log or PCA transformation.
+        if self.log:
             preds = 10**preds
         else:
             if self.probe == 'custom':
@@ -463,7 +471,7 @@ class CosmoPowerJAX:
     def predict(self, input_vec):
         """ Emulate cosmological power spectrum, based on the probe specified as input.
         Need to provide in input the array (or the dictionary) of cosmological parameters.
-        If input is a dictionary, we to convert it to an array internally.
+        If input is a dictionary, we convert it to an array internally.
         
         Parameters
         ----------
