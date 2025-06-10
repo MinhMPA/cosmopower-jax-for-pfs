@@ -456,8 +456,6 @@ class CosmoPowerJAX:
         # For the other probes, proceed with either log or PCA transformation.
         if self.log:
             preds = 10**preds
-        elif self.probe == 'custom':
-            return preds.squeeze()
         else:
             if self.probe == 'custom':
                 pass
