@@ -2,7 +2,8 @@ import pickle
 import numpy as np
 import jax.numpy as jnp
 from jax.nn import sigmoid
-from jax import jacfwd, jacrev
+from jax import jacfwd, jacrev, jit
+from functools import partial
 
 # to deal with the pre-saved models and PCA attributes
 try:
@@ -460,6 +461,7 @@ class CosmoPowerJAX:
         predictions = preds.squeeze()
         return predictions
     
+    @partial(jit, static_argnames=('self',))
     def predict(self, input_vec):
         """ Emulate cosmological power spectrum, based on the probe specified as input.
         Need to provide in input the array (or the dictionary) of cosmological parameters.
